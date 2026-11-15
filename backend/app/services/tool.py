@@ -20,12 +20,17 @@ class ToolService:
         status: str | None = None,
         page: int = 1,
         size: int = 20,
+        extra: dict[str, str] | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         rows = store.rows(MODULE)
         if keyword:
             rows = [row for row in rows if keyword in str(row.get("工具编号", ""))]
         if status:
             rows = [row for row in rows if row.get("status") == status]
+
+        if extra:
+            for field, val in extra.items():
+                rows = [row for row in rows if val in str(row.get(field, ""))]
         total = len(rows)
         start = max(page - 1, 0) * size
         return rows[start:start + size], total
