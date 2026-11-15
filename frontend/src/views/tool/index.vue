@@ -59,7 +59,28 @@
       <span>共 {{ total }} 条工具管理记录</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
-  </section>
+  
+    <Teleport to="body">
+      <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
+        <div class="modal-card">
+          <header class="modal-head">
+            <h3>登记新记录</h3>
+            <button class="btn ghost" type="button" @click="showCreateModal = false">✕</button>
+          </header>
+          <form class="modal-body" @submit.prevent="submitCreate">
+            <label v-for="field in columns.slice(0, 3)" :key="field" class="modal-field">
+              <span>{{ field }}</span>
+              <input v-model="createFields[field]" :placeholder="`请输入${field}`" required />
+            </label>
+            <footer class="modal-foot">
+              <button class="btn" type="button" @click="showCreateModal = false">取消</button>
+              <button class="btn primary" type="submit">提交登记</button>
+            </footer>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+</section>
 </template>
 
 <script setup lang="ts">
@@ -80,6 +101,15 @@ const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+const showCreateModal = ref(false)
+const createFields = ref<Record<string, string>>({})
+
+function updateStats() {
+  const data = rows.value
+  stats.length > 0 && (stats[0].value = data.filter(r => r.status === statuses[1] || r.pending).length)
+  stats.length > 1 && (stats[1].value = data.filter(r => r.status && !r.pending && !r.abnormal).length)
+  stats.length > 2 && (stats[2].value = data.filter(r => r.abnormal).length)
+}
 
 function resetFilters() {
   filters.value = {}
@@ -99,7 +129,7 @@ async function runAction(action: string, row: Row) {
   try {
     const response = await request(`${ENDPOINT}/${row.id}/actions`, {
       method: 'POST',
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ values: { action } }),
     })
     if (!response.ok) {
       throw new Error('工具管理动作未生效，请稍后重试')
@@ -121,6 +151,7 @@ async function reload() {
     const payload = await response.json()
     rows.value = payload.items ?? []
     total.value = payload.total ?? rows.value.length
+    updateStats()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '工具管理列表读取失败'
   }
