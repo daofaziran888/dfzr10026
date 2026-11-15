@@ -121,7 +121,27 @@ function exportRows() {
 }
 
 function openCreate() {
-  errorMessage.value = '学徒登记入口尚未接入审批流'
+  errorMessage.value = ''
+  createFields.value = {}
+  showCreateModal.value = true
+}
+
+async function submitCreate() {
+  errorMessage.value = ''
+  try {
+    const response = await request(ENDPOINT, {
+      method: 'POST',
+      body: JSON.stringify({ values: createFields.value }),
+    })
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.message || '登记失败')
+    }
+    showCreateModal.value = false
+    await reload()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '登记失败'
+  }
 }
 
 async function runAction(action: string, row: Row) {
